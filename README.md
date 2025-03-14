@@ -40,8 +40,8 @@ The **KIITBites Backend** is the core of the food ordering and inventory managem
 ## Environment Variables
 Create a `.env` file in the root directory and configure the following variables:
 ```
-PORT=5000
-MONGO_URI=your_mongodb_uri
+PORT=5001
+MONGO_URL=your_mongodb_uri
 JWT_SECRET=your_secret_key
 REDIS_URL=your_redis_url
 NEXT_PUBLIC_GOOGLE_CLIENT_ID=your_google_client_id
@@ -78,7 +78,7 @@ PAYMENT_GATEWAY_KEY=your_payment_gateway_key
    ```bash
    npm run dev
    ```
-6. The backend server will start on `http://localhost:5000`
+6. The backend server will start on `http://localhost:5001`
 
 ## API Endpoints
 ### Authentication
