@@ -86,23 +86,30 @@ exports.login = async (req, res) => {
     const user = await User.findOne({ $or: [{ email: identifier }, { phone: identifier }] });
 
     if (!user) {
-      console.log("⚠️ User not found:", identifier);
       return res.status(400).json({ message: "User not found" });
     }
 
     if (!user.isVerified) {
-      console.log("⚠️ User not verified:", identifier);
-      return res.status(400).json({ message: "User not verified" });
+      // Generate new OTP
+      const otp = generateOtp();
+      await new Otp({ email: user.email, otp, createdAt: Date.now() }).save();
+
+      // Send OTP email
+      await sendOtpEmail(user.email, otp);
+
+      // Redirect user to OTP verification
+      return res.status(400).json({
+        message: "User not verified. OTP sent to email.",
+        redirectTo: `/otpverification?email=${user.email}&from=login`,
+      });
     }
 
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
-      console.log("⚠️ Invalid credentials:", identifier);
       return res.status(400).json({ message: "Invalid credentials" });
     }
 
-    const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET, { expiresIn: "7d" });
-    console.log("✅ User logged in:", identifier);
+    const token = jwt.sign({ userId: user._id, access: user.access }, process.env.JWT_SECRET, { expiresIn: "7d" });
 
     res.json({ message: "Login successful", token });
   } catch (error) {
