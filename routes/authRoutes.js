@@ -3,7 +3,7 @@ const { signup, verifyOtp, login, forgotPassword, resetPassword, googleAuth, goo
 const router = express.Router();
 
 router.post("/signup", signup);
-router.post("/verifyotp", verifyOtp);
+router.post("/otpverification", verifyOtp);
 router.post("/login", login);
 router.post("/forgotpassword", forgotPassword);
 router.post("/resetpassword", resetPassword);

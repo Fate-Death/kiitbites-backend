@@ -8,6 +8,7 @@ const UserSchema = new mongoose.Schema({
   gender: { type: String, required: true },
   isVerified: { type: Boolean, default: false },
   googleId: { type: String, default: null },
+  access: { type: String, enum: ['user-standard', 'user-premium', 'admin', 'food court', 'refreshment', 'canteen', 'guest house', 'hospitality', 'main store'], default: 'user-standard' },
 }, { timestamps: true });
 
 module.exports = mongoose.model("User", UserSchema);
