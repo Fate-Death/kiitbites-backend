@@ -14,13 +14,12 @@ const PORT = process.env.PORT || 5001;
 // ✅ Fix CORS issues with dynamic frontend URL
 app.use(
   cors({
-    origin: FRONTEND_URL,
-    credentials: true,
+    origin: process.env.CORS_ORIGIN, // Allow only specific frontend
+    credentials: true, // Allow cookies & authentication headers
     methods: ["GET", "POST", "PUT", "DELETE"],
     allowedHeaders: ["Content-Type", "Authorization"],
   })
 );
-
 app.use(express.json());
 
 // ✅ Check if MONGO_URL is set
