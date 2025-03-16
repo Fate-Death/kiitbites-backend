@@ -224,3 +224,19 @@ exports.googleSignup = async (req, res) => {
     res.status(500).json({ message: "Internal Server Error" });
   }
 };
+
+// **8. Logout**
+exports.logout = async (req, res) => {
+  try {
+    console.log("🔵 Logout Request:", req.user.userId);
+
+    // If using a token blacklist, store the token as invalidated
+    // const token = req.headers.authorization.split(" ")[1];
+    // await TokenBlacklist.create({ token });  // Implement a blacklist model if needed
+
+    res.json({ message: "Logged out successfully" });
+  } catch (error) {
+    console.error("❌ Logout Error:", error);
+    res.status(500).json({ message: "Internal Server Error" });
+  }
+};
