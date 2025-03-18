@@ -7,7 +7,7 @@ const UserSchema = new mongoose.Schema({
   password: { type: String, required: false }, // Blank for Google login
   gender: { type: String, required: true },
   isVerified: { type: Boolean, default: false },
-  googleId: { type: String, default: null },
+  // googleId: { type: String, default: null },
   access: { type: String, enum: ['user-standard', 'user-premium', 'admin', 'food court', 'refreshment', 'canteen', 'guest house', 'hospitality', 'main store'], default: 'user-standard' },
 }, { timestamps: true });
 
