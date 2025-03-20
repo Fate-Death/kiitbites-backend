@@ -14,6 +14,16 @@ const hashPassword = async (password) => {
   return await bcrypt.hash(password, salt);
 };
 
+// Cookie Token Set
+const setTokenCookie = (res, token) => {
+  res.cookie("token", token, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production", // Secure in production
+    sameSite: "Strict",
+    maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days in milliseconds
+  });
+};
+
 // **1. User Signup**
 exports.signup = async (req, res) => {
   try {
@@ -33,6 +43,11 @@ exports.signup = async (req, res) => {
     const newUser = new User({ fullName, email, phone, password: hashedPassword, gender });
     await newUser.save();
     console.log("✅ User saved to database:", email);
+
+    //Saving User using Cookie
+    const token = jwt.sign({ userId: newUser._id }, process.env.JWT_SECRET, { expiresIn: "7d" });
+
+    setTokenCookie(res, token);
 
     // Generate OTP & Send Email
     const otp = generateOtp();
@@ -109,7 +124,9 @@ exports.login = async (req, res) => {
       return res.status(400).json({ message: "Invalid credentials" });
     }
 
-    const token = jwt.sign({ userId: user._id, access: user.access }, process.env.JWT_SECRET, { expiresIn: "7d" });
+    const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET, { expiresIn: "7d" });
+
+    setTokenCookie(res, token);
 
     res.json({ message: "Login successful", token });
   } catch (error) {
@@ -226,17 +243,77 @@ exports.googleSignup = async (req, res) => {
 };
 
 // **8. Logout**
-exports.logout = async (req, res) => {
+exports.logout = (req, res) => {
+  console.log(`🔴 User Logged Out: ${req.user?.userId || "Unknown User"}`);
+  res.clearCookie("token");
+  res.json({ message: "Logged out successfully" });
+};
+
+// ** 9. Middleware: Verify JWT Token**
+exports.verifyToken = (req, res, next) => {
+  const token = req.headers.authorization?.split(" ")[1];
+
+  if (!token) {
+    return res.status(401).json({ message: "Unauthorized: No token provided" });
+  }
+
   try {
-    console.log("🔵 Logout Request:", req.user.userId);
-
-    // If using a token blacklist, store the token as invalidated
-    // const token = req.headers.authorization.split(" ")[1];
-    // await TokenBlacklist.create({ token });  // Implement a blacklist model if needed
-
-    res.json({ message: "Logged out successfully" });
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    req.user = decoded;
+    next();
   } catch (error) {
-    console.error("❌ Logout Error:", error);
+    return res.status(403).json({ message: "Forbidden: Invalid or expired token" });
+  }
+};
+
+// **10. Refresh Token Endpoint**
+exports.refreshToken = (req, res) => {
+  let token = req.cookies?.token || req.headers.authorization?.split(" ")[1];
+
+  if (!token) {
+    return res.status(401).json({ message: "Unauthorized: No token provided" });
+  }
+
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    
+    // Generate a new token with a fresh 7-day expiration
+    const newToken = jwt.sign(
+      { userId: decoded.userId, access: decoded.access },
+      process.env.JWT_SECRET,
+      { expiresIn: "7d" }
+    );
+
+    // Store the new token in HTTP-only cookies for persistence
+    res.cookie("token", newToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "Strict",
+      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+    });
+
+    res.json({ message: "Token refreshed", token: newToken });
+  } catch (error) {
+    return res.status(403).json({ message: "Forbidden: Invalid or expired token" });
+  }
+};
+
+
+// **11. Check if Session is Active**
+exports.checkSession = (req, res) => {
+  if (req.user) {
+    return res.json({ message: "Session active", user: req.user });
+  }
+  return res.status(401).json({ message: "Session expired" });
+};
+
+// **12. Get USer**
+exports.getUser = async (req, res) => {
+  try {
+    const user = await User.findById(req.user.userId).select("fullName email");
+    if (!user) return res.status(404).json({ message: "User not found" });
+    res.json(user);
+  } catch (error) {
     res.status(500).json({ message: "Internal Server Error" });
   }
 };
