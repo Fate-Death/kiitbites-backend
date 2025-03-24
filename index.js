@@ -4,6 +4,7 @@ const mongoose = require("mongoose");
 const cors = require("cors");
 const authRoutes = require("./routes/authRoutes");
 const foodRoutes = require("./routes/foodRoutes");
+const contactRoute = require("./routes/contactRoute")
 
 const app = express();
 
@@ -38,6 +39,7 @@ mongoose
 
 app.use("/api/auth", authRoutes);
 app.use("/api", foodRoutes);
+app.use("/contact", contactRoute)
 
 // ✅ Global error handling
 app.use((err, req, res, next) => {
