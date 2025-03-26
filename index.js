@@ -1,12 +1,15 @@
 require("dotenv").config();
 const express = require("express");
-const mongoose = require("mongoose");
 const cors = require("cors");
 const authRoutes = require("./routes/authRoutes");
 const foodRoutes = require("./routes/foodRoutes");
 const contactRoute = require("./routes/contactRoute")
+const connectDB = require("./config/db");
+const teamRoutes = require("./routes/teamRoutes");
 
 const app = express();
+connectDB();
+
 
 // ✅ Load environment variables
 const FRONTEND_URL = process.env.FRONTEND_URL || "http://localhost:3000";
@@ -31,15 +34,10 @@ if (!MONGO_URL) {
   process.exit(1);
 }
 
-// ✅ Connect to MongoDB
-mongoose
-  .connect(MONGO_URL, { useNewUrlParser: true, useUnifiedTopology: true })
-  .then(() => console.log("✅ MongoDB connected successfully"))
-  .catch((err) => console.error("❌ MongoDB connection error:", err));
-
 app.use("/api/auth", authRoutes);
 app.use("/api", foodRoutes);
 app.use("/contact", contactRoute)
+app.use("/team", teamRoutes);
 
 // ✅ Global error handling
 app.use((err, req, res, next) => {
