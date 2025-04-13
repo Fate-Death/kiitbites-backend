@@ -6,4 +6,4 @@ const router = express.Router();
 router.get("/", getTeamMembers);  // GET /team
 router.post("/", addTeamMember);  // POST /team
 
-module.exports = router;
+module.exports = router; 
