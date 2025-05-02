@@ -3,321 +3,263 @@ const Otp = require("../models/Otp");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const crypto = require("crypto");
-const sendOtpEmail = require("../utils/sendOtp");
+const logger = require("../utils/logger");
+const sendOtpQueue = require("../queues/sendOtpQueue.js"); // NEW: BullMQ Queue
 
-// Utility: Generate OTP
 const generateOtp = () => crypto.randomInt(100000, 999999).toString();
 
-// Utility: Hash Password
 const hashPassword = async (password) => {
   const salt = await bcrypt.genSalt(10);
   return await bcrypt.hash(password, salt);
 };
 
-// Cookie Token Set
 const setTokenCookie = (res, token) => {
   res.cookie("token", token, {
     httpOnly: true,
-    secure: process.env.NODE_ENV === "production", // Secure in production
+    secure: process.env.NODE_ENV === "production",
     sameSite: "Strict",
-    maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days in milliseconds
+    maxAge: 7 * 24 * 60 * 60 * 1000,
   });
 };
 
-// **1. User Signup**
+const calculateDelay = (attempts) => {
+  const base = 30; // seconds
+  return Math.pow(2, attempts - 1) * base * 1000;
+};
+
+// === 1. Signup ===
 exports.signup = async (req, res) => {
   try {
-    console.log("🔵 Signup Request Received:", req.body);
-
+    logger.info("Signup Request Received", req.body);
     const { fullName, email, phone, password, gender } = req.body;
-    let existingUser = await User.findOne({ $or: [{ email }, { phone }] });
 
+    const existingUser = await User.findOne({ $or: [{ email }, { phone }] });
     if (existingUser) {
-      console.log("⚠️ User already exists:", email);
+      logger.info("User already exists", email);
       return res.status(400).json({ message: "User already exists" });
     }
 
     const hashedPassword = await hashPassword(password);
-    console.log("🔒 Password hashed successfully");
-
     const newUser = new User({ fullName, email, phone, password: hashedPassword, gender });
     await newUser.save();
-    console.log("✅ User saved to database:", email);
+    logger.info("User saved to DB", email);
 
-    //Saving User using Cookie
     const token = jwt.sign({ userId: newUser._id }, process.env.JWT_SECRET, { expiresIn: "7d" });
-
     setTokenCookie(res, token);
 
-    // Generate OTP & Send Email
     const otp = generateOtp();
-    console.log("🔢 OTP Generated:", otp);
-
     await new Otp({ email, otp }).save();
-    console.log("✅ OTP saved to database");
 
-    await sendOtpEmail(email, otp);
-    console.log("📧 OTP sent to email:", email);
+    await sendOtpQueue.add("sendOtp", { email, otp }); // Queued
+    logger.info("OTP queued for sending", email);
 
-    res.status(201).json({ message: "User registered, OTP sent for verification" });
+    res.status(201).json({ message: "User registered, OTP sent" });
   } catch (error) {
-    console.error("❌ Signup Error:", error);
+    logger.error("Signup Error", error);
     res.status(500).json({ message: "Internal Server Error" });
   }
 };
 
-// **2. OTP Verification**
+// === 2. Verify OTP ===
 exports.verifyOtp = async (req, res) => {
   try {
-    console.log("🔵 OTP Verification Request:", req.body);
-
     const { email, otp } = req.body;
     const otpRecord = await Otp.findOne({ email, otp });
 
     if (!otpRecord) {
-      console.log("⚠️ Invalid or expired OTP:", otp);
       return res.status(400).json({ message: "Invalid or expired OTP" });
     }
 
     await User.findOneAndUpdate({ email }, { isVerified: true });
-    console.log("✅ User verified:", email);
-
     await Otp.deleteOne({ email });
-    console.log("🗑️ OTP deleted from database");
 
+    logger.info("OTP verified", email);
     res.status(200).json({ message: "OTP verified successfully" });
   } catch (error) {
-    console.error("❌ OTP Verification Error:", error);
+    logger.error("OTP Verification Error", error);
     res.status(500).json({ message: "Internal Server Error" });
   }
 };
 
-// **3. Login**
+// === 3. Login ===
 exports.login = async (req, res) => {
   try {
-    console.log("🔵 Login Request:", req.body);
-
     const { identifier, password } = req.body;
     const user = await User.findOne({ $or: [{ email: identifier }, { phone: identifier }] });
 
-    if (!user) {
-      return res.status(400).json({ message: "User not found" });
-    }
+    if (!user) return res.status(400).json({ message: "User not found" });
 
-    if (!user.isVerified) {
-      // Generate new OTP
-      const otp = generateOtp();
-      await new Otp({ email: user.email, otp, createdAt: Date.now() }).save();
+    // Throttle failed login attempts
+    const now = Date.now();
+    const last = user.lastLoginAttempt ? new Date(user.lastLoginAttempt).getTime() : 0;
+    const delay = calculateDelay(user.loginAttempts || 0);
 
-      // Send OTP email
-      await sendOtpEmail(user.email, otp);
-
-      // Redirect user to OTP verification
-      return res.status(400).json({
-        message: "User not verified. OTP sent to email.",
-        redirectTo: `/otpverification?email=${user.email}&from=login`,
-      });
+    if (now - last < delay) {
+      const waitTime = Math.ceil((delay - (now - last)) / 1000);
+      return res.status(429).json({ message: `Too many attempts. Try again in ${waitTime}s.` });
     }
 
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
+      user.loginAttempts = (user.loginAttempts || 0) + 1;
+      user.lastLoginAttempt = new Date();
+      await user.save();
       return res.status(400).json({ message: "Invalid credentials" });
     }
 
-    const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET, { expiresIn: "7d" });
+    if (!user.isVerified) {
+      const otp = generateOtp();
+      await new Otp({ email: user.email, otp }).save();
+      await sendOtpQueue.add("sendOtp", { email: user.email, otp });
 
-    setTokenCookie(res, token);
-
-    res.json({ message: "Login successful", token });
-  } catch (error) {
-    console.error("❌ Login Error:", error);
-    res.status(500).json({ message: "Internal Server Error" });
-  }
-};
-
-// **4. Forgot Password**
-exports.forgotPassword = async (req, res) => {
-  try {
-    console.log("🔵 Forgot Password Request:", req.body);
-
-    const { identifier } = req.body;
-
-    // Find user by email OR phone number
-    const user = await User.findOne({ $or: [{ email: identifier }, { phone: identifier }] });
-
-    if (!user) {
-      console.log("⚠️ User not found:", identifier);
-      return res.status(400).json({ message: "User not found" });
+      return res.status(400).json({
+        message: "User not verified. OTP sent.",
+        redirectTo: `/otpverification?email=${user.email}&from=login`,
+      });
     }
 
-    const emailToSend = user.email; // Use the user's email to send OTP
+    user.loginAttempts = 0;
+    user.lastLoginAttempt = null;
+    await user.save();
 
-    const otp = generateOtp();
-    console.log("🔢 OTP Generated:", otp);
-
-    await new Otp({ email: emailToSend, otp }).save();
-    console.log("✅ OTP saved to database");
-
-    await sendOtpEmail(emailToSend, otp);
-    console.log("📧 OTP sent to email:", emailToSend);
-
-    res.json({ message: "OTP sent for password reset", email: emailToSend });
+    const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET, { expiresIn: "7d" });
+    setTokenCookie(res, token);
+    res.json({ message: "Login successful", token });
   } catch (error) {
-    console.error("❌ Forgot Password Error:", error);
+    logger.error("Login Error", error);
     res.status(500).json({ message: "Internal Server Error" });
   }
 };
 
-// **5. Reset Password**
+// === 4. Forgot Password ===
+exports.forgotPassword = async (req, res) => {
+  try {
+    const { identifier } = req.body;
+    const user = await User.findOne({ $or: [{ email: identifier }, { phone: identifier }] });
+
+    if (!user) return res.status(400).json({ message: "User not found" });
+
+    const otp = generateOtp();
+    await new Otp({ email: user.email, otp }).save();
+    await sendOtpQueue.add("sendOtp", { email: user.email, otp });
+
+    logger.info("OTP queued for password reset", user.email);
+    res.json({ message: "OTP sent for password reset", email: user.email });
+  } catch (error) {
+    logger.error("Forgot Password Error", error);
+    res.status(500).json({ message: "Internal Server Error" });
+  }
+};
+
+// === 5. Reset Password ===
 exports.resetPassword = async (req, res) => {
   try {
-    console.log("🔵 Reset Password Request:", req.body);
-
     const { email, password } = req.body;
     const hashedPassword = await hashPassword(password);
-    console.log("🔒 Password hashed successfully");
 
     await User.findOneAndUpdate({ email }, { password: hashedPassword });
-    console.log("✅ Password updated for:", email);
+    logger.info("Password reset", email);
 
     res.json({ message: "Password updated successfully" });
   } catch (error) {
-    console.error("❌ Reset Password Error:", error);
+    logger.error("Reset Password Error", error);
     res.status(500).json({ message: "Internal Server Error" });
   }
 };
 
-// **6. Google Login**
+// === 6. Google Login / Signup / Logout ===
 exports.googleAuth = async (req, res) => {
   try {
-    console.log("🔵 Google Login Request:", req.body);
-
     const { email } = req.body;
     let user = await User.findOne({ email });
 
-    if (!user) {
-      console.log("⚠️ User not found for Google login:", email);
-      return res.status(400).json({ message: "User does not exist, sign up first" });
-    }
+    if (!user) return res.status(400).json({ message: "User does not exist, sign up first" });
 
     const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET, { expiresIn: "7d" });
-    console.log("✅ Google login successful:", email);
-
     res.json({ message: "Google login successful", token });
   } catch (error) {
-    console.error("❌ Google Login Error:", error);
+    logger.error("Google Login Error", error);
     res.status(500).json({ message: "Internal Server Error" });
   }
 };
 
-// **7. Google Signup**
 exports.googleSignup = async (req, res) => {
   try {
-    console.log("🔵 Google Signup Request:", req.body);
-
     const { email, googleId, fullName } = req.body;
 
     let existingUser = await User.findOne({ email });
+    if (existingUser) return res.status(400).json({ message: "User already exists" });
 
-    if (existingUser) {
-      console.log("⚠️ User already exists:", email);
-      return res.status(400).json({ message: "User already exists. Please log in." });
-    }
-
-    const newUser = new User({
-      fullName,
-      email,
-      phone: "", // No phone number required for Google signup
-      password: "", // Google users won't have a password
-      gender: "", // Ask later or keep it optional
-      googleId,
-      isVerified: true, // No OTP needed for Google Signup
-    });
-
+    const newUser = new User({ fullName, email, phone: "", password: "", gender: "", googleId, isVerified: true });
     await newUser.save();
-    console.log("✅ Google user saved to database:", email);
 
     const token = jwt.sign({ userId: newUser._id }, process.env.JWT_SECRET, { expiresIn: "7d" });
-
     res.status(201).json({ message: "Google signup successful", token });
   } catch (error) {
-    console.error("❌ Google Signup Error:", error);
+    logger.error("Google Signup Error", error);
     res.status(500).json({ message: "Internal Server Error" });
   }
 };
 
-// **8. Logout**
+// === 7. Logout ===
 exports.logout = (req, res) => {
-  console.log(`🔴 User Logged Out: ${req.user?.userId || "Unknown User"}`);
+  logger.info("User Logged Out", req.user?.userId || "Unknown");
   res.clearCookie("token");
   res.json({ message: "Logged out successfully" });
 };
 
-// ** 9. Middleware: Verify JWT Token**
+// === 8. JWT Token Verification ===
 exports.verifyToken = (req, res, next) => {
   const token = req.headers.authorization?.split(" ")[1];
 
-  if (!token) {
-    return res.status(401).json({ message: "Unauthorized: No token provided" });
-  }
+  if (!token) return res.status(401).json({ message: "Unauthorized: No token" });
 
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     req.user = decoded;
     next();
-  } catch (error) {
-    return res.status(403).json({ message: "Forbidden: Invalid or expired token" });
+  } catch {
+    res.status(403).json({ message: "Forbidden: Invalid token" });
   }
 };
 
-// **10. Refresh Token Endpoint**
+// === 9. Refresh Token ===
 exports.refreshToken = (req, res) => {
-  let token = req.cookies?.token || req.headers.authorization?.split(" ")[1];
+  const token = req.cookies?.token || req.headers.authorization?.split(" ")[1];
 
-  if (!token) {
-    return res.status(401).json({ message: "Unauthorized: No token provided" });
-  }
+  if (!token) return res.status(401).json({ message: "Unauthorized" });
 
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    
-    // Generate a new token with a fresh 7-day expiration
-    const newToken = jwt.sign(
-      { userId: decoded.userId, access: decoded.access },
-      process.env.JWT_SECRET,
-      { expiresIn: "7d" }
-    );
+    const newToken = jwt.sign({ userId: decoded.userId }, process.env.JWT_SECRET, { expiresIn: "7d" });
 
-    // Store the new token in HTTP-only cookies for persistence
     res.cookie("token", newToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
       sameSite: "Strict",
-      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+      maxAge: 7 * 24 * 60 * 60 * 1000,
     });
 
     res.json({ message: "Token refreshed", token: newToken });
-  } catch (error) {
-    return res.status(403).json({ message: "Forbidden: Invalid or expired token" });
+  } catch {
+    res.status(403).json({ message: "Forbidden: Invalid token" });
   }
 };
 
-
-// **11. Check if Session is Active**
+// === 10. Session Check ===
 exports.checkSession = (req, res) => {
-  if (req.user) {
-    return res.json({ message: "Session active", user: req.user });
-  }
-  return res.status(401).json({ message: "Session expired" });
+  if (req.user) return res.json({ message: "Session active", user: req.user });
+  res.status(401).json({ message: "Session expired" });
 };
 
-// **12. Get USer**
+// === 11. Get User Profile ===
 exports.getUser = async (req, res) => {
   try {
     const user = await User.findById(req.user.userId).select("fullName email");
     if (!user) return res.status(404).json({ message: "User not found" });
     res.json(user);
   } catch (error) {
+    logger.error("Get User Error", error);
     res.status(500).json({ message: "Internal Server Error" });
   }
 };
