@@ -324,13 +324,41 @@ exports.checkSession = (req, res) => {
   return res.status(401).json({ message: "Session expired" });
 };
 
-// **12. Get USer**
+// **12. Get User**
 exports.getUser = async (req, res) => {
   try {
-    const user = await User.findById(req.user.userId).select("fullName email");
-    if (!user) return res.status(404).json({ message: "User not found" });
+    console.log("🔵 Get User Request");
+    
+    // Get token from either cookie or Authorization header
+    const token = req.cookies?.token || req.headers.authorization?.split(" ")[1];
+    
+    if (!token) {
+      console.log("⚠️ No token provided");
+      return res.status(401).json({ message: "No token provided" });
+    }
+
+    // Verify the token
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    console.log("✅ Token verified, userId:", decoded.userId);
+    
+    // Get user data
+    const user = await User.findById(decoded.userId).select("-password -__v");
+    
+    if (!user) {
+      console.log("⚠️ User not found");
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    console.log("✅ User data retrieved successfully");
     res.json(user);
   } catch (error) {
+    console.error("❌ Get User Error:", error);
+    if (error.name === 'JsonWebTokenError') {
+      return res.status(403).json({ message: "Invalid token" });
+    }
+    if (error.name === 'TokenExpiredError') {
+      return res.status(403).json({ message: "Token expired" });
+    }
     res.status(500).json({ message: "Internal Server Error" });
   }
 };
