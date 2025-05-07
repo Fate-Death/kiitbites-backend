@@ -79,13 +79,26 @@ exports.verifyOtp = async (req, res) => {
       return res.status(400).json({ message: "Invalid or expired OTP" });
     }
 
-    await User.findOneAndUpdate({ email }, { isVerified: true });
+    // Update user verification status
+    const user = await User.findOneAndUpdate(
+      { email },
+      { isVerified: true },
+      { new: true }
+    );
     console.log("✅ User verified:", email);
 
+    // Delete the used OTP
     await Otp.deleteOne({ email });
     console.log("🗑️ OTP deleted from database");
 
-    res.status(200).json({ message: "OTP verified successfully" });
+    // Generate new token for the verified user
+    const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET, { expiresIn: "7d" });
+    setTokenCookie(res, token);
+
+    res.status(200).json({ 
+      message: "OTP verified successfully",
+      token 
+    });
   } catch (error) {
     console.error("❌ OTP Verification Error:", error);
     res.status(500).json({ message: "Internal Server Error" });
