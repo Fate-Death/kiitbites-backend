@@ -1,10 +1,11 @@
 const express = require("express");
-const { searchFoods } = require("../controllers/foodController");
+const { searchFoods, getPopularFoods } = require("../controllers/foodController");
 
 const router = express.Router();
 
 // Define route for searching food
 router.get("/foods", searchFoods);
+router.get("/popular-foods", getPopularFoods);
 router.post("/increase-search", (req, res) => {
     const { foodName } = req.body;
     if (!foodName) return res.status(400).json({ error: "Food name required" });

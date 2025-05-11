@@ -16,7 +16,7 @@ exports.searchFoods = (req, res) => {
 
   // Filter foods that start with the search query
   let filteredFoods = foods.filter((food) =>
-    food.name.toLowerCase().startsWith(lowerQuery)
+    food.name.toLowerCase().includes(lowerQuery)
   );
 
   // Sort results by popularity (searchCount)
@@ -24,6 +24,12 @@ exports.searchFoods = (req, res) => {
 
   res.json(filteredFoods);
 };
+
+exports.getPopularFoods = (req, res) => {
+  const sortedFoods = [...foods].sort((a, b) => b.searchCount - a.searchCount);
+  res.json(sortedFoods.slice(0, 12));
+};
+
 
 // Function to increase search count (for popular search feature)
 exports.incrementSearchCount = (foodName) => {
