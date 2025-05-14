@@ -5,12 +5,15 @@ const authRoutes = require("./routes/authRoutes");
 const foodRoutes = require("./routes/foodRoutes");
 const contactRoute = require("./routes/contactRoute");
 const teamRoutes = require("./routes/teamRoutes");
+const itemRoutes = require("./routes/itemRoutes");
+const inventoryRoutes = require("./routes/inventoryRoutes");
+const foodCourtRoutes = require("./routes/foodCourtRoutes");
+const cartRoutes = require("./routes/cartRoutes");
 
 const app = express();
 
-
-app.use(express.json());  // ✅ Parses incoming JSON data
-app.use(express.urlencoded({ extended: true }));  // ✅ Parses form data
+app.use(express.json()); // ✅ Parses incoming JSON data
+app.use(express.urlencoded({ extended: true })); // ✅ Parses form data
 
 // ✅ Load environment variables
 const FRONTEND_URL = process.env.FRONTEND_URL || "http://localhost:3000";
@@ -27,7 +30,6 @@ app.use(
   })
 );
 
-
 // ✅ Ensure MONGO_URL exists
 
 // ✅ Routes
@@ -35,6 +37,10 @@ app.use("/api/auth", authRoutes);
 app.use("/api", foodRoutes);
 app.use("/contact", contactRoute);
 app.use("/team", teamRoutes);
+app.use("/items", itemRoutes);
+app.use("/inventory", inventoryRoutes);
+app.use("/foodcourts", foodCourtRoutes);
+app.use("/", cartRoutes);
 
 // ✅ Global error handling
 app.use((err, req, res, next) => {
@@ -54,5 +60,7 @@ if (process.env.NODE_ENV === "production") {
 
 // ✅ Start Server
 app.listen(PORT, () =>
-  console.log(`🚀 Server running on port ${PORT}, allowing frontend from ${FRONTEND_URL}`)
+  console.log(
+    `🚀 Server running on port ${PORT}, allowing frontend from ${FRONTEND_URL}`
+  )
 );
