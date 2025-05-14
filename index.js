@@ -40,7 +40,7 @@ app.use("/team", teamRoutes);
 app.use("/items", itemRoutes);
 app.use("/inventory", inventoryRoutes);
 app.use("/foodcourts", foodCourtRoutes);
-app.use("/", cartRoutes);
+app.use("/cart", cartRoutes);
 
 // ✅ Global error handling
 app.use((err, req, res, next) => {
