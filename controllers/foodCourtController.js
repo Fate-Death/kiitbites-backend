@@ -1,14 +1,22 @@
 const mongoose = require("mongoose");
 const bcrypt = require("bcryptjs");
 const { Cluster_Accounts } = require("../config/db");
-const { Cluster_Item } = require("../config/db");
+//const { Cluster_Item } = require("../config/db");
 const Account = Cluster_Accounts.model("Account");
-const Item = Cluster_Item.model("Item");
+//const Item = Cluster_Item.model("Item");
 
-// Create a foodcourt account
+// Create a food provider account (foodcourt, cafe, canteen, guesthouse)
 exports.createFoodcourt = async (req, res) => {
   try {
-    const { email, phone, password, location } = req.body;
+    const { email, phone, password, location, type } = req.body;
+
+    // Validate type
+    const allowedTypes = ["foodcourt", "cafe", "canteen", "guesthouse"];
+    if (!allowedTypes.includes(type)) {
+      return res.status(400).json({
+        message: `Invalid type. Must be one of: ${allowedTypes.join(", ")}`,
+      });
+    }
 
     // Check if account already exists
     const existingAccount = await Account.findOne({
@@ -23,9 +31,9 @@ exports.createFoodcourt = async (req, res) => {
     // Hash password
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // Create foodcourt account
-    const foodcourt = new Account({
-      type: "foodcourt",
+    // Create food provider account
+    const foodProvider = new Account({
+      type, // foodcourt | cafe | canteen | guesthouse
       email,
       phone,
       password: hashedPassword,
@@ -34,19 +42,20 @@ exports.createFoodcourt = async (req, res) => {
       inventory: [],
     });
 
-    await foodcourt.save();
+    await foodProvider.save();
 
     res.status(201).json({
-      message: "Foodcourt account created successfully",
-      foodcourt: {
-        id: foodcourt._id,
-        email: foodcourt.email,
-        location: foodcourt.location,
+      message: `${type} account created successfully`,
+      account: {
+        id: foodProvider._id,
+        email: foodProvider.email,
+        type: foodProvider.type,
+        location: foodProvider.location,
       },
     });
   } catch (err) {
     res.status(500).json({
-      message: "Error creating foodcourt account",
+      message: "Error creating food provider account",
       error: err.message,
     });
   }
