@@ -1,27 +1,27 @@
-const Razorpay = require('razorpay');
-const crypto = require('crypto');
-const Payment = require('../models/order/Payment'); // adjust path as needed
-const Account = require('../models/account/Account');
-const Item = require('../models/item/Item');
+const Razorpay = require("razorpay");
+const crypto = require("crypto");
+const Payment = require("../models/order/Payment"); // adjust path as needed
+const Account = require("../models/account/Account");
+const Item = require("../models/item/Item");
 
 const razorpay = new Razorpay({
   key_id: process.env.RAZORPAY_KEY_ID,
-  key_secret: process.env.RAZORPAY_KEY_SECRET
+  key_secret: process.env.RAZORPAY_KEY_SECRET,
 });
 
 // Utility: Check if cart has any produce item
 async function hasProduceItems(cart) {
-  const itemIds = cart.map(c => c.itemId);
+  const itemIds = cart.map((c) => c.itemId);
   const items = await Item.find({ _id: { $in: itemIds } });
-  return items.some(item => item.type === 'produce');
+  return items.some((item) => item.type === "produce");
 }
 
 exports.createOrder = async (req, res) => {
   try {
     const { userId } = req.body;
 
-    const user = await Account.findById(userId).populate('cart.itemId');
-    if (!user) return res.status(404).json({ error: 'User not found' });
+    const user = await Account.findById(userId).populate("cart.itemId");
+    if (!user) return res.status(404).json({ error: "User not found" });
 
     const produceExists = await hasProduceItems(user.cart);
 
@@ -43,12 +43,12 @@ exports.createOrder = async (req, res) => {
     res.status(200).json({
       orderId: razorpayOrder.id,
       amount: amountInPaise,
-      currency: 'INR',
-      payMode: produceExists ? 'pay_now' : 'pay_on_dine_in',
+      currency: "INR",
+      payMode: produceExists ? "pay_now" : "pay_on_dine_in",
     });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: 'Payment creation failed' });
+    res.status(500).json({ error: "Payment creation failed" });
   }
 };
 
@@ -74,8 +74,10 @@ exports.verifyPayment = async (req, res) => {
       orderId: null, // attach actual order ID if applicable
       userId,
       amount: req.body.amount / 100,
-      status: 'paid',
-      paymentMethod: 'razorpay',
+      status: "paid",
+      paymentMethod: "razorpay",
+      razorpayOrderId: razorpay_order_id,
+      razorpayPaymentId: razorpay_payment_id,
     });
 
     await payment.save();
@@ -83,12 +85,17 @@ exports.verifyPayment = async (req, res) => {
     // Optionally update user's cart/orders
     await Account.findByIdAndUpdate(userId, {
       $push: { pastOrders: payment._id },
-      $set: { cart: [] }
+      $set: { cart: [] },
     });
 
-    res.status(200).json({ message: 'Payment verified successfully', paymentId: payment._id });
+    res
+      .status(200)
+      .json({
+        message: "Payment verified successfully",
+        paymentId: payment._id,
+      });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: 'Payment verification failed' });
+    res.status(500).json({ error: "Payment verification failed" });
   }
 };
