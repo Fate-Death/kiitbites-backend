@@ -5,7 +5,7 @@ const Inventory = require("../models/item/inventory"); // Using the correct clus
 // Assign item to foodcourt
 exports.assignItemToFoodcourt = async (req, res) => {
   try {
-    const { foodCourtId, itemId, quantity, unit } = req.body;
+    const { foodCourtId, itemId, quantity } = req.body;
 
     // ✅ Check if foodCourtId exists and is a valid type
     const foodCourt = await Cluster_Accounts.model("Account")
@@ -40,7 +40,7 @@ exports.assignItemToFoodcourt = async (req, res) => {
     }
 
     // ✅ Create new inventory entry
-    const newInventory = new Inventory({ foodCourtId, itemId, quantity, unit });
+    const newInventory = new Inventory({ foodCourtId, itemId, quantity });
     await newInventory.save();
 
     // ✅ Also update the foodcourt's inventory array
@@ -97,7 +97,7 @@ exports.getInventoryByFoodcourt = async (req, res) => {
     const { foodCourtId } = req.params;
     const inventory = await Inventory.find({ foodCourtId }).populate(
       "itemId",
-      "name price unit"
+      "name price unit "
     );
     res.status(200).json(inventory);
   } catch (err) {
