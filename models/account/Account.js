@@ -43,6 +43,7 @@ const accountSchema = new mongoose.Schema(
       {
         itemId: { type: mongoose.Schema.Types.ObjectId, ref: "Item" },
         quantity: { type: Number, default: 1 },
+        _id: false,
       },
     ], // For users
     pastOrders: [{ type: mongoose.Schema.Types.ObjectId, ref: "Order" }], // For users
