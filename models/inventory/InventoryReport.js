@@ -1,6 +1,5 @@
 const mongoose = require('mongoose');
-const { Cluster_Inventory } = require('../../config/db');
-const { Cluster_Accounts } = require('../../config/db');
+const { Cluster_Inventory, Cluster_Accounts } = require('../../config/db');
 
 const inventoryReportSchema = new mongoose.Schema({
   foodCourtId: {
