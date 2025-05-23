@@ -1,10 +1,9 @@
-// const User = require("../models/users/User");
-const Account = require("../models/account/User");
-const Otp = require("../models/users/Otp");
+const Account = require("../../models/account/Uni");
+const Otp = require("../../models/users/Otp");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const crypto = require("crypto");
-const sendOtpEmail = require("../utils/sendOtp");
+const sendOtpEmail = require("../../utils/sendOtp");
 
 // Utility: Generate OTP
 const generateOtp = () => crypto.randomInt(100000, 999999).toString();
@@ -30,7 +29,7 @@ exports.signup = async (req, res) => {
   try {
     console.log("🔵 Signup Request Received:", req.body);
 
-    const { fullName, email, phone, password, gender, type, location } =
+    const { name, email, phone, password } =
       req.body;
 
     const existingUser = await Account.findOne({ $or: [{ email }, { phone }] });
@@ -43,31 +42,12 @@ exports.signup = async (req, res) => {
     console.log("🔒 Password hashed successfully");
 
     const accountData = {
-      fullName,
+      name,
       email,
       phone,
       password: hashedPassword,
-      type,
       isVerified: false,
     };
-
-    if (["user-standard", "user-premium", "admin"].includes(type)) {
-      accountData.fullName = fullName;
-      accountData.gender = gender;
-    }
-
-    if (
-      [
-        "foodcourt",
-        "cafe",
-        "canteen",
-        "guesthouse",
-        "hospitality",
-        "main",
-      ].includes(type)
-    ) {
-      accountData.location = location;
-    }
 
     const newAccount = new Account(accountData);
     await newAccount.save();
