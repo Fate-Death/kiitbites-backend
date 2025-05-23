@@ -3,7 +3,7 @@ const { Cluster_Accounts } = require("../../config/db");
 
 const vendorSchema = new mongoose.Schema(
   {
-    name: { type: String, required: true },
+    fullName: { type: String, required: true },
     email: { type: String, required: true, unique: true },
     phone: { type: String, unique: true },
     password: { type: String, required: true }, // hash this in pre-save hook

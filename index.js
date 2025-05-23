@@ -1,7 +1,9 @@
 require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
-const authRoutes = require("./routes/authRoutes");
+const userAuthRoutes = require("./routes/auth/userAuthRoutes");
+const uniAuthRoutes = require("./routes/auth/uniAuthRoutes");
+const vendorAuthRoutes = require("./routes/auth/vendorAuthRoutes");
 // const foodRoutes = require("./routes/foodRoutes");
 const contactRoute = require("./routes/contactRoute");
 const teamRoutes = require("./routes/teamRoutes");
@@ -33,7 +35,9 @@ app.use(
 // ✅ Ensure MONGO_URL exists
 
 // ✅ Routes
-app.use("/api/auth", authRoutes);
+app.use("/api/user/auth", userAuthRoutes);
+app.use("/api/uni/auth", uniAuthRoutes);
+app.use("/api/vendor/auth", vendorAuthRoutes);
 // app.use("/api", foodRoutes);
 app.use("/contact", contactRoute);
 app.use("/team", teamRoutes);

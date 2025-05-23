@@ -14,6 +14,7 @@ const userSchema = new mongoose.Schema(
     phone: { type: String, required: true, unique: true },
     password: { type: String, required: true },
     gender: { type: String },
+    uniID: { type: mongoose.Schema.Types.ObjectId, ref: "Uni" },
 
     isVerified: { type: Boolean, default: false },
 
@@ -56,7 +57,6 @@ const userSchema = new mongoose.Schema(
         _id: false,
       },
     ],
-
     loginAttempts: { type: Number, default: 0 },
     lastLoginAttempt: { type: Date, default: null },
   },
