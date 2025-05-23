@@ -37,7 +37,7 @@ const inventoryReportSchema = new mongoose.Schema(
       {
         itemId: {
           type: mongoose.Schema.Types.ObjectId,
-          refPath: "itemRecieved.kind",
+          refPath: "itemReceived.kind",
         },
         kind: { type: String, enum: ["Retail", "Produce", "Raw"] },
         quantity: Number,
