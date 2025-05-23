@@ -29,7 +29,7 @@ exports.signup = async (req, res) => {
   try {
     console.log("🔵 Signup Request Received:", req.body);
 
-    const { name, email, phone, password } =
+    const { fullName, email, phone, password } =
       req.body;
 
     const existingUser = await Account.findOne({ $or: [{ email }, { phone }] });
@@ -42,7 +42,7 @@ exports.signup = async (req, res) => {
     console.log("🔒 Password hashed successfully");
 
     const accountData = {
-      name,
+      fullName,
       email,
       phone,
       password: hashedPassword,

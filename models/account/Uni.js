@@ -3,7 +3,7 @@ const { Cluster_Accounts } = require("../../config/db");
 
 const uniSchema = new mongoose.Schema(
   {
-    name: { type: String, required: true, unique: true },
+    fullName: { type: String, required: true, unique: true },
     email: { type: String, required: true, unique: true },
     phone: { type: String, unique: true },
     password: { type: String, required: true },
