@@ -4,7 +4,6 @@ const { Cluster_Item } = require("../../config/db"); // Using the clustered data
 
 const rawSchema = new mongoose.Schema({
   name: { type: String, required: true },
-  image: { type: String, required: true },
   unit: { type: String, required: true },
 });
 
