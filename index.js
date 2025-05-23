@@ -2,15 +2,13 @@ require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
 const authRoutes = require("./routes/authRoutes");
-const foodRoutes = require("./routes/foodRoutes");
+// const foodRoutes = require("./routes/foodRoutes");
 const contactRoute = require("./routes/contactRoute");
 const teamRoutes = require("./routes/teamRoutes");
-const itemRoutes = require("./routes/itemRoutes");
-const inventoryRoutes = require("./routes/inventoryRoutes");
+// const itemRoutes = require("./routes/itemRoutes");
 const foodCourtRoutes = require("./routes/foodCourtRoutes");
 const cartRoutes = require("./routes/cartRoutes");
-const paymentRoutes = require("./routes/paymentRoute");
-const inventoryReportRoutes = require("./routes/inventoryReportRoute");
+// const paymentRoutes = require("./routes/paymentRoute");
 
 const app = express();
 
@@ -36,15 +34,13 @@ app.use(
 
 // ✅ Routes
 app.use("/api/auth", authRoutes);
-app.use("/api", foodRoutes);
+// app.use("/api", foodRoutes);
 app.use("/contact", contactRoute);
 app.use("/team", teamRoutes);
-app.use("/items", itemRoutes);
-app.use("/inventory", inventoryRoutes);
+// app.use("/items", itemRoutes);
 app.use("/foodcourts", foodCourtRoutes);
 app.use("/cart", cartRoutes);
-app.use("/payment", paymentRoutes);
-app.use("/inventoryreport", inventoryReportRoutes);
+// app.use("/payment", paymentRoutes);
 
 
 // ✅ Global error handling
