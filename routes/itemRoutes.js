@@ -1,12 +1,14 @@
-// routes/itemRoutes.js
-const express = require("express");
-const router = express.Router();
-const itemController = require("../controllers/itemController");
+// // routes/itemRoutes.js
+// const express = require("express");
+// const router = express.Router();
+// const itemController = require("../controllers/itemController");
 
-// Route to create a new item in the global catalog
-router.post("/", itemController.createItem);
+// // Route to create a new item in the global catalog
+// router.post("/", itemController.createItem);
 
-// Route to get all items in the global catalog
-router.get("/", itemController.getItems);
+// // Route to get all items in the global catalog
+// router.get("/", itemController.getItems);
+// router.get("/search", itemController.searchItems); 
 
-module.exports = router;
+
+// module.exports = router;

@@ -2,9 +2,9 @@ const mongoose = require("mongoose");
 const { Cluster_Accounts, Cluster_Item } = require("../config/db");
 
 //Register schemas from respective clusters
-const Account = Cluster_Accounts.model("Account");
-const Inventory = Cluster_Item.model("Inventory");
-const Item = Cluster_Item.model("Item"); // ⬅️ Needed for correct populationconst Order = require('../models/orderModel'); // Adjust the path if needed
+const Account = Cluster_Accounts.model("User");
+// const Inventory = Cluster_Item.model("Inventory");
+// const Item = Cluster_Item.model("Item"); // ⬅️ Needed for correct populationconst Order = require('../models/orderModel'); // Adjust the path if needed
 const Order = require("../models/order/Order"); // Adjust the path if needed
 
 // const Account = require("../models/account/Account");
