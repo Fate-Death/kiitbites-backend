@@ -1,21 +1,11 @@
 const mongoose = require("mongoose");
 const { Cluster_Accounts } = require("../../config/db");
 
-const accountSchema = new mongoose.Schema(
+const userSchema = new mongoose.Schema(
   {
     type: {
       type: String,
-      enum: [
-        "user-standard",
-        "user-premium",
-        "admin",
-        "foodcourt",
-        "cafe",
-        "canteen",
-        "guesthouse",
-        "hospitality",
-        "main",
-      ],
+      enum: ["user-standard", "user-premium", "admin"],
       required: true,
       default: "user-standard",
     },
@@ -36,19 +26,36 @@ const accountSchema = new mongoose.Schema(
     },
     subscriptionExpiry: { type: Date, default: null },
 
-    // Optional fields per type
-    location: { type: String }, // For foodcourts/cafes
-    inventory: [{ type: mongoose.Schema.Types.ObjectId, ref: "Item" }], // For foodcourts
+    vendorId: { type: mongoose.Schema.Types.ObjectId, ref: "Vendor" },
     cart: [
       {
-        itemId: { type: mongoose.Schema.Types.ObjectId, ref: "Item" },
+        itemId: {
+          type: mongoose.Schema.Types.ObjectId,
+          required: true,
+          refPath: "cart.kind",
+        },
+        kind: { type: String, required: true, enum: ["Retail", "Produce"] },
         quantity: { type: Number, default: 1 },
         _id: false,
       },
     ], // For users
     pastOrders: [{ type: mongoose.Schema.Types.ObjectId, ref: "Order" }], // For users
     activeOrders: [{ type: mongoose.Schema.Types.ObjectId, ref: "Order" }], // For users
-    favourites: [{ type: mongoose.Schema.Types.ObjectId, ref: "Item" }], // For users
+    favourites: [
+      {
+        itemId: {
+          type: mongoose.Schema.Types.ObjectId,
+          refPath: "favourites.kind",
+          required: true,
+        },
+        kind: {
+          type: String,
+          enum: ["Retail", "Produce"],
+          required: true,
+        },
+        _id: false,
+      },
+    ],
 
     loginAttempts: { type: Number, default: 0 },
     lastLoginAttempt: { type: Date, default: null },
@@ -56,4 +63,4 @@ const accountSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-module.exports = Cluster_Accounts.model("Account", accountSchema);
+module.exports = Cluster_Accounts.model("User", userSchema);

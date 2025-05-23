@@ -1,5 +1,5 @@
 // const User = require("../models/users/User");
-const Account = require("../models/account/Account");
+const Account = require("../models/account/User");
 const Otp = require("../models/users/Otp");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
@@ -400,7 +400,9 @@ exports.getUser = async (req, res) => {
     console.log("✅ Token verified, userId:", decoded.userId);
 
     // Get user data
-    const user = await Account.findById(decoded.userId).select("-password -__v");
+    const user = await Account.findById(decoded.userId).select(
+      "-password -__v"
+    );
 
     if (!user) {
       console.log("⚠️ User not found");

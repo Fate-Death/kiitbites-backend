@@ -1,49 +1,69 @@
-const mongoose = require('mongoose');
-const { Cluster_Inventory, Cluster_Accounts } = require('../../config/db');
+const mongoose = require("mongoose");
+const { Cluster_Inventory } = require("../../config/db");
 
-const inventoryReportSchema = new mongoose.Schema({
-  foodCourtId: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'Account',
-    required: true,
-    validate: {
-      validator: async function (value) {
-        const account = await Cluster_Accounts.model("Account")
-          .findById(value)
-          .select("type");
+const inventoryReportSchema = new mongoose.Schema(
+  {
+    vendorId: { type: mongoose.Schema.Types.ObjectId, ref: "Vendor" },
+    date: { type: Date, default: Date.now },
 
-        const allowedTypes = [
-          "admin",
-          "foodcourt",
-          "cafe",
-          "canteen",
-          "guesthouse",
-          "hospitality",
-          "main",
-        ];
-
-        return account && allowedTypes.includes(account.type);
+    retailEntries: [
+      {
+        item: { type: mongoose.Schema.Types.ObjectId, ref: "Retail" },
+        openingQty: Number,
+        closingQty: Number,
+        soldQty: Number,
+        _id: false,
       },
-      message: "foodCourtId must reference an Account with a valid service type.",
-    },
+    ],
+
+    produceEntries: [
+      {
+        item: { type: mongoose.Schema.Types.ObjectId, ref: "Produce" },
+        soldQty: Number,
+        _id: false,
+      },
+    ],
+
+    rawEntries: [
+      {
+        item: { type: mongoose.Schema.Types.ObjectId, ref: "Raw" },
+        openingQty: Number,
+        closingQty: Number,
+        _id: false,
+      },
+    ],
+
+    itemReceived: [
+      {
+        itemId: {
+          type: mongoose.Schema.Types.ObjectId,
+          refPath: "itemReceived.kind",
+        },
+        kind: { type: String, enum: ["Retail", "Produce", "Raw"] },
+        quantity: Number,
+        _id: false,
+        date: { type: Date, default: Date.now },
+      },
+    ],
+
+    itemSend: [
+      {
+        itemId: {
+          type: mongoose.Schema.Types.ObjectId,
+          refPath: "itemProduced.kind",
+        },
+        kind: { type: String, enum: ["Retail", "Produce", "Raw"] },
+        quantity: Number,
+        _id: false,
+        date: { type: Date, default: Date.now },
+      },
+    ],
   },
-  date: { type: Date, default: Date.now },
-  entries: [{
-    item: { type: mongoose.Schema.Types.ObjectId, ref: 'Item' },
-    customName: { type: String }, // Only for user-added items
-    openingQty: Number,
-    closingQty: Number,
-    type: {
-      type: String,
-      enum: ['retail', 'user'],
-      required: function () {
-        return !this.customName; // Only required if not a custom item
-      },
-    }
-  }],  
-});
-
-// Register the model with the Cluster_Inventory connection
-const InventoryReport = Cluster_Inventory.model('InventoryReport', inventoryReportSchema);
+  { timestamps: true } // correct place for this
+);
+const InventoryReport = Cluster_Inventory.model(
+  "InventoryReport",
+  inventoryReportSchema
+);
 
 module.exports = InventoryReport;
