@@ -4,7 +4,9 @@ const { Cluster_Accounts, Cluster_Item } = require("../config/db");
 //Register schemas from respective clusters
 const Account = Cluster_Accounts.model("Account");
 const Inventory = Cluster_Item.model("Inventory");
-const Item = Cluster_Item.model("Item"); // ⬅️ Needed for correct population
+const Item = Cluster_Item.model("Item"); // ⬅️ Needed for correct populationconst Order = require('../models/orderModel'); // Adjust the path if needed
+const Order = require("../models/order/Order"); // Adjust the path if needed
+
 // const Account = require("../models/account/Account");
 // const Inventory = require("../models/item/inventory");
 // const Item = require("../models/item/Item");
@@ -332,6 +334,148 @@ exports.getExtras = async (req, res) => {
     res.json({ extras });
   } catch (err) {
     console.error("Get Extras Error:", err);
+    res.status(500).json({ error: "Server error" });
+  }
+};
+exports.placeOrder = async (req, res) => {
+  const { userId } = req.body;
+
+  if (!mongoose.Types.ObjectId.isValid(userId)) {
+    return res.status(400).json({ error: "Invalid userId" });
+  }
+
+  try {
+    const user = await Account.findById(userId).populate({
+      path: "cart.itemId",
+      model: Item,
+    });
+
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    if (!user.cart || user.cart.length === 0) {
+      return res.status(400).json({ error: "Cart is empty" });
+    }
+
+    const hasInvalidItems = user.cart.some((cartItem) => !cartItem.itemId);
+    if (hasInvalidItems) {
+      return res
+        .status(400)
+        .json({ error: "Cart contains invalid or deleted items" });
+    }
+
+    // Determine foodCourtId using first item
+    const firstItemId = user.cart[0].itemId._id;
+    const foodCourtId = await getFoodCourtIdForItem(firstItemId);
+
+    if (!foodCourtId) {
+      return res
+        .status(404)
+        .json({ error: "Foodcourt not found for the first cart item" });
+    }
+
+    // Log for debugging
+    // console.log("Placing order for user:", userId);
+    // console.log("Using foodCourtId:", foodCourtId.toString());
+
+    // Check inventory for each item
+    const inventoryCheckResults = await Promise.all(
+      user.cart.map(async (cartItem) => {
+        const inventory = await Inventory.findOne({
+          itemId: new mongoose.Types.ObjectId(cartItem.itemId._id),
+          foodCourtId: new mongoose.Types.ObjectId(foodCourtId),
+        });
+
+        if (!inventory || inventory.quantity < cartItem.quantity) {
+          console.warn("Inventory issue for item:", cartItem.itemId.name, {
+            itemId: cartItem.itemId._id.toString(),
+            foodCourtId: foodCourtId.toString(),
+            foundQuantity: inventory ? inventory.quantity : 0,
+            requested: cartItem.quantity,
+          });
+
+          return {
+            item: {
+              _id: cartItem.itemId._id,
+              name: cartItem.itemId.name,
+            },
+            available: inventory ? inventory.quantity : 0,
+            requested: cartItem.quantity,
+            inStock: false,
+          };
+        }
+
+        return {
+          inStock: true,
+        };
+      })
+    );
+
+    const outOfStockItems = inventoryCheckResults.filter(
+      (item) => !item.inStock
+    );
+
+    if (outOfStockItems.length > 0) {
+      return res.status(400).json({
+        error: "Some items are out of stock or have insufficient quantity",
+        outOfStockItems,
+      });
+    }
+
+    // Build order
+    const orderItems = user.cart.map((item) => ({
+      item: item.itemId._id,
+      quantity: item.quantity,
+      isProduce: false, // Add your logic if needed
+    }));
+
+    const total = user.cart.reduce(
+      (sum, item) => sum + item.itemId.price * item.quantity,
+      0
+    );
+
+    const order = new Order({
+      userId: user._id,
+      foodCourtId,
+      items: orderItems,
+      total,
+      status: "ordered",
+      paymentStatus: "unpaid",
+    });
+
+    // Update inventory
+    const inventoryUpdatePromises = user.cart.map((cartItem) =>
+      Inventory.findOneAndUpdate(
+        {
+          itemId: cartItem.itemId._id,
+          foodCourtId,
+        },
+        {
+          $inc: { quantity: -cartItem.quantity },
+        },
+        { new: true }
+      )
+    );
+
+    // Save order, update inventory, clear cart
+    await Promise.all([
+      order.save(),
+      ...inventoryUpdatePromises,
+      Account.findByIdAndUpdate(userId, { cart: [] }),
+    ]);
+
+    res.status(201).json({
+      message: "Order placed successfully",
+      order: {
+        id: order._id,
+        total,
+        items: orderItems,
+        status: order.status,
+      },
+    });
+  } catch (err) {
+    console.error("Place Order Error:", err);
     res.status(500).json({ error: "Server error" });
   }
 };

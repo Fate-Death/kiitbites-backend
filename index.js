@@ -9,7 +9,8 @@ const itemRoutes = require("./routes/itemRoutes");
 const inventoryRoutes = require("./routes/inventoryRoutes");
 const foodCourtRoutes = require("./routes/foodCourtRoutes");
 const cartRoutes = require("./routes/cartRoutes");
-const paymentRoutes = require("./routes/paymentRoute")
+const paymentRoutes = require("./routes/paymentRoute");
+const inventoryReportRoutes = require("./routes/inventoryReportRoute");
 
 const app = express();
 
@@ -43,6 +44,7 @@ app.use("/inventory", inventoryRoutes);
 app.use("/foodcourts", foodCourtRoutes);
 app.use("/cart", cartRoutes);
 app.use("/payment", paymentRoutes);
+app.use("/inventoryreport", inventoryReportRoutes);
 
 
 // ✅ Global error handling

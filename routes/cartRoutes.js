@@ -9,4 +9,5 @@ router.post("/remove-item", cartController.removeItem);
 router.get("/:userId", cartController.getCart);
 router.get("/extras/:userId", cartController.getExtras);
 router.post("/add-one", cartController.increaseOne);
+router.post("/pay/:userId", cartController.placeOrder);
 module.exports = router;
