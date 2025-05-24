@@ -1,5 +1,5 @@
 const express = require("express");
-const { signup, verifyOtp, login, forgotPassword, resetPassword, googleAuth, googleSignup, logout, refreshToken, verifyToken, checkSession, getUser } = require("../../controllers/auth/userAuthController");
+const { signup, verifyOtp, login, forgotPassword, resetPassword, googleAuth, googleSignup, logout, refreshToken, verifyToken, checkSession, getUser, getColleges } = require("../../controllers/auth/userAuthController");
 const router = express.Router();
 
 // Auth routes
@@ -13,6 +13,7 @@ router.post("/googleSignup", googleSignup);
 router.post("/logout", logout);
 router.get("/refresh", refreshToken);
 router.get("/check", verifyToken, checkSession);
+router.get("/list", getColleges);
 
 // User data route - protected by verifyToken middleware
 router.get("/user", verifyToken, getUser);
