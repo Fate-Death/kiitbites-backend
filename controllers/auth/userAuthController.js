@@ -404,3 +404,17 @@ exports.getUser = async (req, res) => {
     res.status(500).json({ message: "Internal Server Error" });
   }
 };
+
+exports.getColleges = async (req, res) => {
+  try {
+    const Uni = require("../../models/account/Uni");
+
+    // Fetch only _id and fullName of all colleges
+    const colleges = await Uni.find({}, '_id fullName');
+
+    res.status(200).json(colleges);
+  } catch (error) {
+    console.error("Error fetching colleges:", error);
+    res.status(500).json({ message: "Error fetching colleges" });
+  }
+};
