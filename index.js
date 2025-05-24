@@ -7,7 +7,7 @@ const vendorAuthRoutes = require("./routes/auth/vendorAuthRoutes");
 // const foodRoutes = require("./routes/foodRoutes");
 const contactRoute = require("./routes/contactRoute");
 const teamRoutes = require("./routes/teamRoutes");
-// const itemRoutes = require("./routes/itemRoutes");
+const itemRoutes = require("./routes/itemRoutes");
 const foodCourtRoutes = require("./routes/foodCourtRoutes");
 const cartRoutes = require("./routes/cartRoutes");
 // const paymentRoutes = require("./routes/paymentRoute");
@@ -41,11 +41,10 @@ app.use("/api/vendor/auth", vendorAuthRoutes);
 // app.use("/api", foodRoutes);
 app.use("/contact", contactRoute);
 app.use("/team", teamRoutes);
-// app.use("/items", itemRoutes);
+app.use("/items", itemRoutes);
 app.use("/foodcourts", foodCourtRoutes);
 app.use("/cart", cartRoutes);
 // app.use("/payment", paymentRoutes);
-
 
 // ✅ Global error handling
 app.use((err, req, res, next) => {

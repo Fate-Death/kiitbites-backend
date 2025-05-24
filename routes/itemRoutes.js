@@ -1,14 +1,11 @@
-// // routes/itemRoutes.js
-// const express = require("express");
-// const router = express.Router();
-// const itemController = require("../controllers/itemController");
+const express = require("express");
+const router = express.Router();
+const itemController = require("../controllers/itemController");
 
-// // Route to create a new item in the global catalog
-// router.post("/", itemController.createItem);
+// Route Pattern: /api/items/:category
+router.post("/:category", itemController.addItem);
+router.get("/:category", itemController.getAllItems);
+router.put("/:category/:id", itemController.updateItem);
+router.delete("/:category/:id", itemController.deleteItem);
 
-// // Route to get all items in the global catalog
-// router.get("/", itemController.getItems);
-// router.get("/search", itemController.searchItems); 
-
-
-// module.exports = router;
+module.exports = router;

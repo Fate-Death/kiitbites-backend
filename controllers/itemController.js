@@ -1,60 +1,67 @@
-// const Item = require("../models/item/Item");
+const Retail = require("../models/item/Retail");
+const Produce = require("../models/item/Produce");
 
-// // Create new item
-// exports.createItem = async (req, res) => {
-//   try {
-//     // Destructure the fields including the image
-//     const { name, type, unit, price, image } = req.body;
+// Utility to get the correct model
+const getModel = (category) => {
+  switch (category.toLowerCase()) {
+    case "retail":
+      return Retail;
+    case "produce":
+      return Produce;
+    default:
+      throw new Error("Invalid category. Must be 'retail' or 'produce'.");
+  }
+};
 
-//     // Create a new Item object
-//     const newItem = new Item({
-//       name,
-//       type,
-//       unit,
-//       price,
-//       image, // Add image field to the item
-//     });
+// Add Item
+exports.addItem = async (req, res) => {
+  try {
+    const { category } = req.params;
+    const ItemModel = getModel(category);
+    const item = new ItemModel(req.body);
+    await item.save();
+    res.status(201).json({ message: "Item added successfully", item });
+  } catch (error) {
+    res.status(400).json({ error: error.message });
+  }
+};
 
-//     // Save the new item to the database
-//     await newItem.save();
+// Get All Items
+exports.getAllItems = async (req, res) => {
+  try {
+    const { category } = req.params;
+    const ItemModel = getModel(category);
+    const items = await ItemModel.find();
+    res.status(200).json(items);
+  } catch (error) {
+    res.status(400).json({ error: error.message });
+  }
+};
 
-//     // Respond with the created item
-//     res.status(201).json(newItem);
-//   } catch (err) {
-//     res
-//       .status(500)
-//       .json({ message: "Error creating item", error: err.message });
-//   }
-// };
+// Update Item
+exports.updateItem = async (req, res) => {
+  try {
+    const { category, id } = req.params;
+    const ItemModel = getModel(category);
+    const updatedItem = await ItemModel.findByIdAndUpdate(id, req.body, {
+      new: true,
+    });
+    if (!updatedItem) return res.status(404).json({ error: "Item not found" });
+    res.status(200).json({ message: "Item updated", item: updatedItem });
+  } catch (error) {
+    res.status(400).json({ error: error.message });
+  }
+};
 
-// // Get all items
-// exports.getItems = async (req, res) => {
-//   try {
-//     // Fetch all items from the database
-//     const items = await Item.find();
-
-//     // Respond with the list of items
-//     res.status(200).json(items);
-//   } catch (err) {
-//     res
-//       .status(500)
-//       .json({ message: "Error fetching items", error: err.message });
-//   }
-// };
-
-// // Search items by name
-// exports.searchItems = async (req, res) => {
-//   try {
-//     const { query } = req.query;
-//     if (!query) {
-//       return res.status(400).json({ message: "Query parameter is required" });
-//     }
-
-//     // Use a case-insensitive regex search
-//     const items = await Item.find({ name: { $regex: query, $options: "i" } });
-//     res.status(200).json(items);
-//   } catch (err) {
-//     res.status(500).json({ message: "Error searching items", error: err.message });
-//   }
-// };
-
+// Delete Item
+exports.deleteItem = async (req, res) => {
+  try {
+    const { category, id } = req.params;
+    const ItemModel = getModel(category);
+    const deletedItem = await ItemModel.findByIdAndDelete(id);
+    if (!deletedItem) return res.status(404).json({ error: "Item not found" });
+    res.status(200).json({ message: "Item deleted", item: deletedItem });
+  } catch (error) {
+    res.status(400).json({ error: error.message });
+  }
+};
