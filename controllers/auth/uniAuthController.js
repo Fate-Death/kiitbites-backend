@@ -379,10 +379,13 @@ exports.getUser = async (req, res) => {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     console.log("✅ Token verified, userId:", decoded.userId);
 
-    // Get user data
-    const user = await Account.findById(decoded.userId).select(
-      "-password -__v"
-    );
+    // Get user data with populated vendors
+    const user = await Account.findById(decoded.userId)
+      .select("-password -__v")
+      .populate({
+        path: 'vendors.vendorId',
+        select: 'fullName email phone location' // Select only the fields you want to see
+      });
 
     if (!user) {
       console.log("⚠️ User not found");
