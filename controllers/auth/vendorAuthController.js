@@ -1,4 +1,5 @@
 const Account = require("../../models/account/Vendor");
+const Uni = require("../../models/account/Uni");
 const Otp = require("../../models/users/Otp");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
@@ -24,7 +25,7 @@ const setTokenCookie = (res, token) => {
   });
 };
 
-// **1. User Signup**exports.signup = async (req, res) => {
+// **1. User Signup**
 exports.signup = async (req, res) => {
   try {
     console.log("🔵 Signup Request Received:", req.body);
@@ -55,6 +56,20 @@ exports.signup = async (req, res) => {
     await newAccount.save();
     console.log("✅ Account created:", email);
 
+    // Update Uni's vendors array
+    await Uni.findByIdAndUpdate(
+      uniID,
+      {
+        $push: {
+          vendors: {
+            vendorId: newAccount._id,
+            isAvailable: "Y"
+          }
+        }
+      }
+    );
+    console.log("✅ Vendor added to Uni's vendors array");
+
     const token = jwt.sign(
       { id: newAccount._id, role: newAccount.type },
       process.env.JWT_SECRET,
@@ -68,9 +83,6 @@ exports.signup = async (req, res) => {
 
     await sendOtpEmail(email, otp);
     console.log("📧 OTP sent to email:", email);
-
-    // Optional: Set cookie
-    // setTokenCookie(res, token);
 
     return res.status(201).json({
       message: "Account created successfully. OTP sent for verification.",
