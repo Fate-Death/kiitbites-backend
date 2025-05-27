@@ -36,8 +36,10 @@ exports.addInventory = async (req, res) => {
 
     // Get today's date range
     const today = new Date();
-    const startOfDay = new Date(today.setHours(0, 0, 0, 0));
-    const endOfDay = new Date(today.setHours(23, 59, 59, 999));
+    const startOfDay = new Date(today);
+    startOfDay.setHours(0, 0, 0, 0);
+    const endOfDay = new Date(today);
+    endOfDay.setHours(23, 59, 59, 999);
 
     // Get or create today's InventoryReport for the vendor
     let report = await InventoryReport.findOne({
