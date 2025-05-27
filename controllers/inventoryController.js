@@ -154,9 +154,9 @@ exports.reduceRetailInventory = async (req, res) => {
     existingRetail.quantity -= quantity;
     vendor.markModified("retailInventory");
 
-    // Prepare today's date range
-    const today = new Date().toISOString().split("T")[0];
-    const startDate = new Date(today);
+    // Prepare today's date range using local time
+    const now = new Date();
+    const startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
     const endDate = new Date(startDate.getTime() + 24 * 60 * 60 * 1000);
 
     let report = await InventoryReport.findOne({
