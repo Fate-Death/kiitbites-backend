@@ -7,7 +7,7 @@ const {
 } = require("../controllers/favouritesController");
 
 router.get("/:userId", getFavourites);
-router.get("/:userId/uni", getFavouritesByUni);
+router.get("/:userId/:uniId", getFavouritesByUni);
 router.patch("/:userId/:itemId/:kind", toggleFavourite);
 
 module.exports = router;

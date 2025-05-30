@@ -60,11 +60,10 @@ exports.getFavourites = async (req, res) => {
 // Get favourite items filtered by uniId
 exports.getFavouritesByUni = async (req, res) => {
   try {
-    const { userId } = req.params;
-    const { uniId } = req.query;
+    const { userId, uniId } = req.params;
 
     if (!uniId) {
-      return res.status(400).json({ error: "Missing 'uniId' in query." });
+      return res.status(400).json({ error: "Missing 'uniId' in path." });
     }
 
     const user = await User.findById(userId).lean();
